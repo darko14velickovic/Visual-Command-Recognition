@@ -15,6 +15,10 @@
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 
+# ignore model
+model/*
+
+
 # Gradle:
 .idea/**/gradle.xml
 .idea/**/libraries
@@ -47,3 +51,5 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
+
+model/
