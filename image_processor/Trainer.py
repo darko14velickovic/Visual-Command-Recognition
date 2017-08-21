@@ -187,33 +187,66 @@ class CnnTrainer:
 
 
     def testing(self, folders):
+
+
         predictionLabel = 0
+
+        confusion_matrix = []
+        print("-------- Confusion matrix ---------")
         for folder in folders:
             correct_predictions = 0
             wrong_predictions = 0
             totalTests = 0
+
+            confusion_row = np.zeros(folders.__len__())
+
             for pathAndFilename in glob.iglob(os.path.join("test data/" + folder + "/", r"*.png")):
-                # title, ext = os.path.splitext(os.path.basename(pathAndFilename))
+
                 image = cv2.imread(pathAndFilename)
                 totalTests += 1
                 image = np.divide(image, 1000.)
-                prediction = self.model.predict([image])
+                prediction = self.evaluate_img(image)
                 maxIndex = np.argmax(prediction)
+
+                confusion_row[maxIndex] += 1
+
                 if maxIndex == predictionLabel:
                     correct_predictions += 1
+
                 else:
                     wrong_predictions += 1
 
+            print_string = folders[predictionLabel] + " | "
 
+            confusion_matrix.append(confusion_row)
+
+            for each in confusion_row:
+                print_string += str(each) + " | "
+
+            print(print_string)
             predictionLabel += 1
-            print("Predictions for class: " + folder)
-            print("Correct predictions: " + str(correct_predictions))
-            print("Wrong predictions: " + str(wrong_predictions))
-            print("Total: " + str(totalTests))
 
-            print("Correct percent: " + str(correct_predictions / float(totalTests)))
-            print("Wrong percent: " + str(wrong_predictions / float(totalTests)))
-            print("===============================================================")
+        print("--------- Metrics ---------")
+        confusion_matrix = np.array(confusion_matrix)
+        sum_total_gold = np.sum(confusion_matrix, axis=0)
+        sum_total_predicted = np.sum(confusion_matrix, axis=1)
+
+        print(sum_total_gold)
+        print(sum_total_predicted)
+
+        for i in range(0, folders.__len__()):
+            tp = confusion_matrix[i][i]
+            total_predicted = sum_total_predicted[i]
+            total_gold = sum_total_gold[i]
+
+            precision = tp / total_predicted
+            recall = tp / total_gold
+            fm = 2 * (precision * recall) / (precision + recall)
+
+            print("Precision for class: " + folders[i]+ " is: " + str(precision))
+            print("Recall for class: " + folders[i] + " is: " + str(recall))
+            print("F-measure for class: " + folders[i] + " is: " + str(fm))
+            print("---------------------------")
 
     def load_cnn(self, file_name):
         self.model.load("model/" +file_name+".tfl")
