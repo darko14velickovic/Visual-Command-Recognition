@@ -1,6 +1,6 @@
 import argparse
 import datetime
-from Queue import Queue
+
 
 import imutils
 import time
@@ -8,6 +8,10 @@ import cv2
 import numpy as np
 
 from image_processor import Trainer
+
+import skvideo.io
+
+
 
 # printing util
 def print_sign_top_text(frame, showing_what):
@@ -35,7 +39,7 @@ def check_roi(roi):
 
     max_index = np.argmax(prediction)
 
-    certainty = str(prediction[0][max_index])
+    certainty = prediction[0][max_index]
     class_string = ""
     if max_index == 3:
         class_string = "OTHER"
@@ -48,6 +52,8 @@ def check_roi(roi):
     elif max_index == 2:
         # print_sign_top_text(frame, "POINT: " + certainty)
         class_string = "POINT"
+
+    print("Predicting class: %s with certainty :%f", class_string, certainty)
     return class_string, certainty
 
 # construct the argument parser and parse the arguments
@@ -55,18 +61,20 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
 ap.add_argument("-a", "--minarea", type=int, default=60, help="minimum area size")
 ap.add_argument("-m", "--network", type=str, default="hands", help="name of the network model in model folder")
-ap.add_argument("-d", "--dimension", type=int, default=60, help="dimension of the network input layer")
+ap.add_argument("-d", "--dimension", type=int, default=60, help="dimension of the network output layer")
 
 args = vars(ap.parse_args())
 
 # if the video argument is None, then we are reading from webcam
 if args.get("video", None) is None:
-    camera = cv2.VideoCapture(0)
+    camera = skvideo.io.VideoCapture(0)
+    # camera.set(4 , 352)
+    # camera.set(5 , 288)
     time.sleep(0.25)
 
 # otherwise, we are reading from a video file
 else:
-    camera = cv2.VideoCapture(args["video"])
+    camera = skvideo.io.VideoCapture(args["video"])
 
 # initialize the first frame in the video stream
 firstFrame = None
@@ -77,13 +85,15 @@ neural_net = Trainer.CnnTrainer(args.get("minarea"), args.get("dimension"), args
 neural_net.load_cnn(args.get("network"))
 print("Neural net loaded")
 
-positions_of_interest = Queue(100)
 
 show_string = ""
 percent = ""
 
 min_x = 999999999
 min_y = 999999999
+
+print("Min area argument: ")
+print(args["minarea"])
 
 # loop over the frames of the video
 while True:
@@ -92,10 +102,13 @@ while True:
     # if the frame could not be grabbed, then we have reached the end
     # of the video
     if not grabbed:
+        print("Cant grab from camera!")
         break
 
     # resize the frame, convert it to grayscale, and blur it
-    frame = imutils.resize(frame, width=500)
+    # print("Got image")
+    frame = imutils.resize(frame, width=800)
+    # print("imutils resize done")
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (21, 21), 0)
 
@@ -111,9 +124,8 @@ while True:
     # dilate the thresholded image to fill in holes, then find contours
     # on thresholded image
     thresh = cv2.dilate(thresh, None, iterations=2)
-    (cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+    (im2, cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
                                  cv2.CHAIN_APPROX_SIMPLE)
-
     # save frame for the next comparison
     firstFrame = gray
     dim = args.get("minarea")
@@ -147,7 +159,13 @@ while True:
     percs = []
 
     cv2.rectangle(frame, (min_x, min_y), (min_x + dim, min_y + dim), (0, 255, 0), 2)
-    roi = frame[min_x: min_x + dim, min_y: min_y + dim]
+    # roi = frame[min_x: min_x + dim, min_y: min_y + dim]
+    roi = frame[min_y: min_y + dim, min_x: min_x + dim]
+    if roi.shape[0] is not 0:
+        cv2.imshow("RoI", roi)
+
+    # roi = frame[min_y: min_y + dim, min_x: min_x + dim]
+
     if roi.shape[0] == dim and roi.shape[1] == dim:
         l, p = check_roi(roi)
         if l is not "OTHER":
@@ -155,7 +173,9 @@ while True:
             percs.append(p)
 
     cv2.rectangle(frame, (min_x, min_y), (min_x - dim, min_y + dim), (0, 255, 0), 2)
-    roi = frame[min_x: min_x - dim, min_y: min_y + dim]
+    # roi = frame[min_x: min_x - dim, min_y: min_y + dim]
+    roi = frame[min_y: min_y + dim, min_x: min_x - dim]
+
     if roi.shape[0] == dim and roi.shape[1] == dim:
         l, p = check_roi(roi)
         if l is not "OTHER":
@@ -163,7 +183,9 @@ while True:
             percs.append(p)
 
     cv2.rectangle(frame, (min_x, min_y), (min_x + dim, min_y - dim), (0, 255, 0), 2)
-    roi = frame[min_x: min_x + dim, min_y: min_y - dim]
+    # roi = frame[min_x: min_x + dim, min_y: min_y - dim]
+    roi = frame[min_y: min_y - dim, min_x: min_x + dim]
+
     if roi.shape[0] == dim and roi.shape[1] == dim:
         l, p = check_roi(roi)
         if l is not "OTHER":
@@ -171,26 +193,42 @@ while True:
             percs.append(p)
 
     cv2.rectangle(frame, (min_x, min_y), (min_x - dim, min_y - dim), (0, 255, 0), 2)
-    roi = frame[min_x: min_x - dim, min_y: min_y - dim]
+    # roi = frame[min_x: min_x - dim, min_y: min_y - dim]
+    roi = frame[min_y: min_y - dim, min_x: min_x - dim]
+
     if roi.shape[0] == dim and roi.shape[1] == dim:
         l, p = check_roi(roi)
         if l is not "OTHER":
             labels.append(l)
             percs.append(p)
 
+    cv2.rectangle(frame, (min_x - dim / 2, min_y - dim / 2), (min_x + dim / 2, min_y + dim / 2), (255, 0, 0), 2)
+    # roi = frame[min_x: min_x - dim, min_y: min_y - dim]
+    roi = frame[min_y: min_y - dim, min_x: min_x - dim]
+
+    if roi.shape[0] == dim and roi.shape[1] == dim:
+        l, p = check_roi(roi)
+        if l is not "OTHER":
+            labels.append(l)
+            percs.append(p)
 
     if percs.__len__() > 0:
         index = np.argmax(percs)
-        show_string = labels[index]
-        percent = percs[index]
+        test = percs[index]
+        if test > 0.7:
+            show_string = labels[index]
+            percent = percs[index]
 
-    print_sign_top_text(frame, show_string + ":" + percent)
+
+
+    print_sign_top_text(frame, show_string + ":" + str(percent))
+
     cv2.imshow("Motion detector", frame)
-    cv2.imshow("Thresh", thresh)
-    cv2.imshow("Frame Delta", frameDelta)
+    # cv2.imshow("Thresh", thresh)
+    # cv2.imshow("Frame Delta", frameDelta)
 
     # show the frame and record if the user presses a key
-    key = cv2.waitKey(1) & 0xFF
+    key = cv2.waitKey(30)# & 0xFF
     if key == ord("q"):
         break
 

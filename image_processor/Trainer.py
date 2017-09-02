@@ -31,6 +31,7 @@ class CnnTrainer:
         img_aug.add_random_rotation(max_angle=25.)
 
         # Convolutional network building
+
         network = input_data(shape=[None, input_size, input_size, 3],
         data_preprocessing=img_prep,
         data_augmentation=img_aug)
@@ -46,7 +47,15 @@ class CnnTrainer:
 
         network = max_pool_2d(network, 2)
 
-        network = conv_2d(network, input_size , 3, activation='relu')
+
+        # added
+        #network = conv_2d(network, input_size + 25, 5, activation='relu')
+
+        # added
+        #network = conv_2d(network, input_size + 25, 3, activation='relu')
+
+        # ------------------------------------------
+        network = conv_2d(network, input_size, 3, activation='relu')
         network = local_response_normalization(network)
 
         network = fully_connected(network, 256, activation='relu')
