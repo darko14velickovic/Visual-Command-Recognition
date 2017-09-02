@@ -157,6 +157,7 @@ while True:
 
     labels = []
     percs = []
+    move_coords = []
 
     cv2.rectangle(frame, (min_x, min_y), (min_x + dim, min_y + dim), (0, 255, 0), 2)
     # roi = frame[min_x: min_x + dim, min_y: min_y + dim]
@@ -171,6 +172,7 @@ while True:
         if l is not "OTHER":
             labels.append(l)
             percs.append(p)
+            move_coords.append((5 , 5))
 
     cv2.rectangle(frame, (min_x, min_y), (min_x - dim, min_y + dim), (0, 255, 0), 2)
     # roi = frame[min_x: min_x - dim, min_y: min_y + dim]
@@ -181,6 +183,8 @@ while True:
         if l is not "OTHER":
             labels.append(l)
             percs.append(p)
+            move_coords.append((-5, 5))
+
 
     cv2.rectangle(frame, (min_x, min_y), (min_x + dim, min_y - dim), (0, 255, 0), 2)
     # roi = frame[min_x: min_x + dim, min_y: min_y - dim]
@@ -191,6 +195,7 @@ while True:
         if l is not "OTHER":
             labels.append(l)
             percs.append(p)
+            move_coords.append((5, -5))
 
     cv2.rectangle(frame, (min_x, min_y), (min_x - dim, min_y - dim), (0, 255, 0), 2)
     # roi = frame[min_x: min_x - dim, min_y: min_y - dim]
@@ -201,11 +206,10 @@ while True:
         if l is not "OTHER":
             labels.append(l)
             percs.append(p)
+            move_coords.append((-5, -5))
 
-    cv2.rectangle(frame, (min_x - dim / 2, min_y - dim / 2), (min_x + dim / 2, min_y + dim / 2), (255, 0, 0), 2)
-    # roi = frame[min_x: min_x - dim, min_y: min_y - dim]
-    roi = frame[min_y: min_y - dim, min_x: min_x - dim]
-
+    cv2.rectangle(frame, (min_x - dim / 2, min_y - dim / 2), (min_x + dim / 2, min_y + dim / 2), (0, 255, 0), 2)
+    roi = frame[min_x: min_x - dim, min_y: min_y - dim]
     if roi.shape[0] == dim and roi.shape[1] == dim:
         l, p = check_roi(roi)
         if l is not "OTHER":
